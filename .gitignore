@@ -13,5 +13,9 @@ apps/whatsapp-bot/auth_state_*/
 # but it's per-deployment and shouldn't be committed
 apps/whatsapp-bot/antiban-state*.json
 
+# Pairing QR (src/index.ts writes this on each fresh pairing) — single-use and expires
+# fast, but no reason to let it land in a commit either
+apps/whatsapp-bot/qr.png
+
 .DS_Store
 .turbo/

@@ -12,7 +12,7 @@
  * apps/whatsapp-bot/auth_state around).
  */
 import { BotConnection } from "./connection.js";
-import { config, required } from "./config.js";
+import { required } from "./config.js";
 import { logger } from "./logger.js";
 
 function parseArgs(argv: string[]) {

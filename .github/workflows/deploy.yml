@@ -3,7 +3,7 @@ name: Deploy bot
 # Template only — needs repo secrets before it'll run: DEPLOY_HOST, DEPLOY_USER,
 # DEPLOY_SSH_KEY (private key for a deploy-only user, not your personal key).
 # Disabled by default (workflow_dispatch only) so it can't fire before hosting exists
-# and secrets are set — flip to `push: branches: [main]` once that's true.
+# and secrets are set — flip to `push: branches: [master]` once that's true.
 on:
   workflow_dispatch:
 

@@ -2,19 +2,18 @@ import makeWASocket, {
   useMultiFileAuthState,
   fetchLatestBaileysVersion,
   DisconnectReason,
-  type WASocket,
 } from "@whiskeysockets/baileys";
 import { Boom } from "@hapi/boom";
 import qrcode from "qrcode";
 import { wrapSocket } from "baileys-antiban";
-
-// baileys-antiban doesn't export its WASocket interface publicly — derive it from
-// wrapSocket's own parameter type instead of re-declaring a parallel shape here.
-type AntibanSocket = Parameters<typeof wrapSocket>[0];
 import { config } from "./config.js";
 import { logger } from "./logger.js";
 import { ReconnectBackoff, sleep } from "./reconnect.js";
 import { recordHeartbeat, startHeartbeatLoop, type BotStatus } from "./health.js";
+
+// baileys-antiban doesn't export its WASocket interface publicly — derive it from
+// wrapSocket's own parameter type instead of re-declaring a parallel shape here.
+type AntibanSocket = Parameters<typeof wrapSocket>[0];
 
 export type SafeSocket = ReturnType<typeof wrapSocket>;
 
