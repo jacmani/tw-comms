@@ -1,0 +1,22 @@
+name: Deploy bot
+
+# Template only — needs repo secrets before it'll run: DEPLOY_HOST, DEPLOY_USER,
+# DEPLOY_SSH_KEY (private key for a deploy-only user, not your personal key).
+# Disabled by default (workflow_dispatch only) so it can't fire before hosting exists
+# and secrets are set — flip to `push: branches: [main]` once that's true.
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+      - name: Deploy over SSH
+        run: |
+          ssh -o StrictHostKeyChecking=accept-new \
+            ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+            'bash /opt/tw-comms/infra/deploy.sh'

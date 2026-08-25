@@ -1,0 +1,29 @@
+# Alternative to Docker: plain systemd unit for a bare Oracle Free Tier / VPS instance
+# running Node directly (no container overhead — matters more on a 1 OCPU ARM free
+# tier instance). Install:
+#
+#   sudo cp infra/tw-comms-bot.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now tw-comms-bot
+#
+# Adjust User/WorkingDirectory/ExecStart for the actual deploy path and the account
+# the bot should run as (never root).
+
+[Unit]
+Description=TWAOA notice bot (Baileys)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=tw-comms
+WorkingDirectory=/opt/tw-comms/apps/whatsapp-bot
+EnvironmentFile=/opt/tw-comms/.env
+ExecStart=/usr/bin/node dist/index.js
+Restart=on-failure
+RestartSec=10
+# The app already does its own reconnect backoff for WhatsApp-level disconnects;
+# this restart is only for the process crashing outright.
+
+[Install]
+WantedBy=multi-user.target

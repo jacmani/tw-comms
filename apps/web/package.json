@@ -1,0 +1,9 @@
+{
+  "name": "@tw-comms/web",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Dashboard (compose, templates, history) — Phase 3. Not scaffolded yet, on purpose.",
+  "scripts": {
+    "dev": "echo 'Phase 3 — not scaffolded yet. See apps/web/README.md.' && exit 1"
+  }
+}

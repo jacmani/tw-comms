@@ -1,0 +1,15 @@
+# For local or VPS use: `docker compose -f infra/docker-compose.yml up -d`
+# Run from the repo root so the build context (..) resolves correctly.
+services:
+  whatsapp-bot:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    volumes:
+      - bot-auth-state:/app/apps/whatsapp-bot/auth_state
+
+volumes:
+  bot-auth-state:

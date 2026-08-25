@@ -1,0 +1,16 @@
+{
+  "name": "tw-comms",
+  "private": true,
+  "version": "0.1.0",
+  "description": "TWAOA notice/announcement broadcast tool — WhatsApp bot + dashboard",
+  "engines": {
+    "node": ">=20 <23"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "dev:bot": "pnpm --filter @tw-comms/whatsapp-bot dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck"
+  }
+}

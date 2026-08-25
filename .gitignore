@@ -1,0 +1,13 @@
+node_modules/
+dist/
+build/
+.env
+.env.local
+*.log
+
+# Baileys auth session — NEVER commit this, it's equivalent to a live login session
+apps/whatsapp-bot/auth_state/
+apps/whatsapp-bot/auth_state_*/
+
+.DS_Store
+.turbo/
