@@ -40,6 +40,9 @@ importers:
       '@types/node':
         specifier: ^22.7.4
         version: 22.20.1
+      '@types/qrcode':
+        specifier: ^1.5.5
+        version: 1.5.6
       tsx:
         specifier: ^4.19.1
         version: 4.23.12
@@ -465,6 +468,9 @@ packages:
 
   '@types/node@22.20.1':
     resolution: {integrity: sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q==}
+
+  '@types/qrcode@1.5.6':
+    resolution: {integrity: sha512-te7NQcV2BOvdj2b1hCAHzAoMNuj65kNBMz0KBaxM6c3VGBOhU0dURQKOtH8CFNI/dsKkwlv32p26qYQTWoB5bw==}
 
   '@whiskeysockets/baileys@6.7.24':
     resolution: {integrity: sha512-Ljq7si+gsNIE9d5dP69E99TTQp+BxxPgitWvmZMXExGc1Ctr0SCDLFZmxRLUDC5HB0/Itw5uk+HJeBONrLP99Q==}
@@ -1229,6 +1235,10 @@ snapshots:
   '@types/node@22.20.1':
     dependencies:
       undici-types: 6.21.0
+
+  '@types/qrcode@1.5.6':
+    dependencies:
+      '@types/node': 22.20.1
 
   '@whiskeysockets/baileys@6.7.24(sharp@0.35.3(@types/node@22.20.1))':
     dependencies:

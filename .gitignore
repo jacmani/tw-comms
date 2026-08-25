@@ -9,5 +9,9 @@ build/
 apps/whatsapp-bot/auth_state/
 apps/whatsapp-bot/auth_state_*/
 
+# baileys-antiban warm-up/rate-limiter state — regenerable runtime state, not a secret,
+# but it's per-deployment and shouldn't be committed
+apps/whatsapp-bot/antiban-state*.json
+
 .DS_Store
 .turbo/

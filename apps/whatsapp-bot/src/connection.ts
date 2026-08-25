@@ -7,6 +7,10 @@ import makeWASocket, {
 import { Boom } from "@hapi/boom";
 import qrcode from "qrcode";
 import { wrapSocket } from "baileys-antiban";
+
+// baileys-antiban doesn't export its WASocket interface publicly — derive it from
+// wrapSocket's own parameter type instead of re-declaring a parallel shape here.
+type AntibanSocket = Parameters<typeof wrapSocket>[0];
 import { config } from "./config.js";
 import { logger } from "./logger.js";
 import { ReconnectBackoff, sleep } from "./reconnect.js";
@@ -47,7 +51,14 @@ export class BotConnection {
 
   async start(): Promise<void> {
     this.stopped = false;
-    this.stopHeartbeat = startHeartbeatLoop(() => this.status);
+    this.stopHeartbeat = startHeartbeatLoop(
+      () => this.status,
+      () => {
+        if (!this.sock) return {};
+        const { warmUp, health } = this.sock.antiban.getStats();
+        return { warmUp, health };
+      }
+    );
     await this.connect();
   }
 
@@ -73,12 +84,37 @@ export class BotConnection {
       printQRInTerminal: false,
     });
 
-    this.sock = wrapSocket(rawSock, {
-      maxPerMinute: config.antiban.maxPerMinute,
-      maxPerHour: config.antiban.maxPerHour,
-      maxPerDay: config.antiban.maxPerDay,
-      logging: true,
-    });
+    this.sock = wrapSocket(
+      // baileys-antiban's WASocket type declares groupParticipantsUpdate with a plain
+      // `string` action param, narrower than Baileys' own ParticipantAction union —
+      // the runtime shape is compatible, this is purely the two libraries' declared
+      // types disagreeing on an optional method neither of us calls through the
+      // wrapper's type.
+      rawSock as unknown as AntibanSocket,
+      {
+        maxPerMinute: config.antiban.maxPerMinute,
+        maxPerHour: config.antiban.maxPerHour,
+        maxPerDay: config.antiban.maxPerDay,
+        // 7-day warm-up ramp is on by default; growthFactor is deliberately left
+        // unset — a fixed value would make every bot on this library follow the
+        // identical daily curve, which is itself a cross-account fingerprint.
+        warmupDays: 7,
+        persist: config.antiban.statePath,
+        logging: true,
+      },
+      undefined,
+      {
+        // WA's observed unofficial limits (see baileys-antiban's own
+        // groupOperationGuard docs) — explicit here rather than relying on the
+        // library default so the Phase 1 acceptance number is visible in code.
+        groupOpGuard: {
+          limits: {
+            add: { max: 3, windowMs: 10 * 60_000 },
+            create: { max: 2, windowMs: 10 * 60_000 },
+          },
+        },
+      }
+    );
 
     rawSock.ev.on("creds.update", saveCreds);
 
@@ -107,7 +143,13 @@ export class BotConnection {
     if (connection === "open") {
       this.status = "open";
       this.backoff.reset();
-      await recordHeartbeat("open", { attempt: this.backoff.attemptCount });
+      const { warmUp, health } = this.sock!.antiban.getStats();
+      logger.info({ warmUp, health }, "antiban state after connect");
+      await recordHeartbeat("open", {
+        attempt: this.backoff.attemptCount,
+        warmUp,
+        health,
+      });
       this.opts.onReady?.(this.sock!);
     }
 

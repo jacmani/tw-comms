@@ -31,9 +31,12 @@ export async function recordHeartbeat(
   }
 }
 
-export function startHeartbeatLoop(getStatus: () => BotStatus): () => void {
+export function startHeartbeatLoop(
+  getStatus: () => BotStatus,
+  getDetail: () => Record<string, unknown> = () => ({})
+): () => void {
   const interval = setInterval(() => {
-    void recordHeartbeat(getStatus());
+    void recordHeartbeat(getStatus(), getDetail());
   }, config.health.heartbeatIntervalMs);
   return () => clearInterval(interval);
 }

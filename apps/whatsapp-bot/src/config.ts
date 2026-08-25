@@ -30,11 +30,17 @@ export const config = {
     maxPerMinute: Number(optional("ANTIBAN_MAX_PER_MINUTE", "15")),
     maxPerHour: Number(optional("ANTIBAN_MAX_PER_HOUR", "400")),
     maxPerDay: Number(optional("ANTIBAN_MAX_PER_DAY", "2000")),
+    // Warm-up ramp + rate-limiter counters persist here so a reconnect or process
+    // restart doesn't reset day-1 of the 7-day warm-up (wrapSocket() is called fresh
+    // on every reconnect in connection.ts — without this the ramp would silently
+    // restart on every network blip).
+    statePath: optional("ANTIBAN_STATE_FILE", "./antiban-state.json"),
   },
 
   health: {
+    // 5 minutes per the Phase 1 heartbeat acceptance criteria.
     heartbeatIntervalMs: Number(
-      optional("HEALTH_HEARTBEAT_INTERVAL_MS", "60000")
+      optional("HEALTH_HEARTBEAT_INTERVAL_MS", "300000")
     ),
   },
 };
