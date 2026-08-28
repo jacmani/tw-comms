@@ -1,4 +1,15 @@
-import "dotenv/config";
+import { config as loadEnv } from "dotenv";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+
+// dotenv/config's default behavior resolves ".env" relative to process.cwd(),
+// which pnpm sets to *this package's* directory (apps/whatsapp-bot) when run via
+// `pnpm --filter @tw-comms/whatsapp-bot dev` / `pnpm dev:bot` — regardless of which
+// directory you invoked pnpm from. The .env file lives at the repo root, so that
+// default silently finds nothing and every var here falls back to "". Resolve the
+// path from this file's own location instead, so it works no matter the cwd.
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+loadEnv({ path: path.resolve(__dirname, "../../../.env") });
 
 function optional(name: string, fallback = ""): string {
   return process.env[name] ?? fallback;

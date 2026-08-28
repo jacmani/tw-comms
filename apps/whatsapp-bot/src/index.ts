@@ -17,20 +17,23 @@ async function main() {
       logger.info("QR saved to apps/whatsapp-bot/qr.png — scan it, then delete it.");
     },
     onReady: async (sock) => {
-      logger.info("Bot connected. Listing joined groups to help find COMMITTEE_GROUP_JID:");
-      try {
-        const groups = await sock.groupFetchAllParticipating();
-        for (const [jid, meta] of Object.entries(groups)) {
-          logger.info(`  ${jid}  ${(meta as { subject?: string }).subject ?? ""}`);
-        }
-      } catch (err) {
-        logger.warn({ err }, "could not list groups (older Baileys/account state)");
-      }
+      logger.info("Bot connected.");
 
+      // Only dump the full joined-groups list while COMMITTEE_GROUP_JID is still
+      // unset — that's the one thing it's for. Once it's configured, printing
+      // 300+ group lines on every restart is just noise.
       if (!config.committeeGroupJid) {
         logger.warn(
-          "COMMITTEE_GROUP_JID is not set yet — manual-trigger sends (src/send.ts) will fail until it is."
+          "COMMITTEE_GROUP_JID is not set yet — manual-trigger sends (src/send.ts) will fail until it is. Listing joined groups to help find it:"
         );
+        try {
+          const groups = await sock.groupFetchAllParticipating();
+          for (const [jid, meta] of Object.entries(groups)) {
+            logger.info(`  ${jid}  ${(meta as { subject?: string }).subject ?? ""}`);
+          }
+        } catch (err) {
+          logger.warn({ err }, "could not list groups (older Baileys/account state)");
+        }
       }
     },
   });

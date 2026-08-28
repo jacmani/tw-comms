@@ -17,9 +17,14 @@ import { logger } from "./logger.js";
 
 function parseArgs(argv: string[]) {
   const args: Record<string, string> = {};
-  for (let i = 0; i < argv.length; i += 1) {
-    if (argv[i].startsWith("--")) {
-      args[argv[i].slice(2)] = argv[i + 1];
+  // pnpm (unlike npm) passes a bare "--" separator through to the script instead of
+  // stripping it — `pnpm --filter pkg send -- --to committee` hands this script
+  // ["--", "--to", "committee", ...]. Drop any lone "--" token before parsing so the
+  // CLI works the same whether it's invoked via pnpm, npm, or tsx directly.
+  const cleaned = argv.filter((a) => a !== "--");
+  for (let i = 0; i < cleaned.length; i += 1) {
+    if (cleaned[i].startsWith("--")) {
+      args[cleaned[i].slice(2)] = cleaned[i + 1];
       i += 1;
     }
   }
