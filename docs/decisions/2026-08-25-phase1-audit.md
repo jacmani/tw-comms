@@ -4,11 +4,21 @@ Audited against `docs/specs/03-build-and-test-phases.md` §3 (the authoritative 
 exit criteria), not against ClickUp task titles or the earlier scaffold session's own
 claims. Repo state audited: commit `064e473` (post CI-fix, pre this session's changes).
 
-**ClickUp is unreachable this pass** — every read/write call returned
-`Rate limit exceeded, wait ~1330 min` (shared quota across sessions, already hit
-once earlier today). Per instruction, not retried in a loop. Section 3 below lists
-exactly what would have been written to ClickUp; apply by hand or re-run once the
-window clears.
+**Update 2026-08-28:** ClickUp access recovered and section 3's updates were applied
+as written (comments + status moves on all 7 tasks, plus 4 new `🐛 Bugs & Findings`
+entries — 3 closed as already-fixed, 1 left open: the schema-drift finding).
+Also found, while re-checking repo state before this pass: `apps/whatsapp-bot/auth_state/`
+now contains real pairing files (`creds.json`, a session file) dated 2026-08-26, with
+no corresponding record anywhere of what that live test actually showed — flagged on
+`86d3zfdq7` asking whoever ran it to comment with the outcome. Two real bugs
+(`.env` not loading under `pnpm dev:bot`'s cwd, `send.ts`'s arg parser breaking on
+pnpm's passed-through `--`) were found and fixed alongside that discovery — commit
+`296374b`. Original rate-limited note below kept for the record.
+
+**ClickUp was unreachable during the original pass** — every read/write call
+returned `Rate limit exceeded, wait ~1330 min` (shared quota across sessions,
+already hit once earlier that day). Per instruction, not retried in a loop. Section
+3 below is what was actually written once access came back, per the note above.
 
 **Spec-vs-repo mechanism gap** (per `docs/specs/README.md`, not re-litigated here):
 the original spec's `agent`/`human` ClickUp *tags* and native dependency *links* were
