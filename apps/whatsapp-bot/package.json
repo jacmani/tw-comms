@@ -11,7 +11,7 @@
     "export-audit": "tsx src/exportAudit.ts",
     "lint": "eslint src --ext .ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "tsx --test \"src/**/*.test.ts\""
+    "test": "tsx --test $(find src -name '*.test.ts')"
   },
   "dependencies": {
     "@hapi/boom": "^10.0.1",
