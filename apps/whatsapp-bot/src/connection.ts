@@ -5,11 +5,11 @@ import makeWASocket, {
 } from "@whiskeysockets/baileys";
 import { Boom } from "@hapi/boom";
 import qrcode from "qrcode";
-import { wrapSocket } from "baileys-antiban";
+import { wrapSocket, type BanRiskLevel } from "baileys-antiban";
 import { config } from "./config.js";
 import { logger } from "./logger.js";
 import { ReconnectBackoff, sleep } from "./reconnect.js";
-import { recordHeartbeat, startHeartbeatLoop, type BotStatus } from "./health.js";
+import { recordEvent, startHeartbeatLoop, shouldAlertBanRisk, type BotStatus } from "./health.js";
 
 // baileys-antiban doesn't export its WASocket interface publicly — derive it from
 // wrapSocket's own parameter type instead of re-declaring a parallel shape here.
@@ -37,6 +37,9 @@ export class BotConnection {
   private sock: SafeSocket | null = null;
   private stopHeartbeat: (() => void) | null = null;
   private stopped = false;
+  // Edge-triggers ban_suspected so a sustained high-risk period logs one alert, not
+  // one every heartbeat interval — re-arms once risk drops back below "high".
+  private lastAlertedRisk: BanRiskLevel | null = null;
 
   constructor(private opts: StartOptions = {}) {}
 
@@ -50,15 +53,31 @@ export class BotConnection {
 
   async start(): Promise<void> {
     this.stopped = false;
-    this.stopHeartbeat = startHeartbeatLoop(
-      () => this.status,
-      () => {
-        if (!this.sock) return {};
-        const { warmUp, health } = this.sock.antiban.getStats();
-        return { warmUp, health };
-      }
-    );
+    this.stopHeartbeat = startHeartbeatLoop(() => this.heartbeatTick());
     await this.connect();
+  }
+
+  private heartbeatTick(): void {
+    if (!this.sock) {
+      void recordEvent("heartbeat", { connectionStatus: this.status });
+      return;
+    }
+
+    const { warmUp, health } = this.sock.antiban.getStats();
+
+    if (shouldAlertBanRisk(health.risk, this.lastAlertedRisk ?? undefined)) {
+      logger.error({ health }, "baileys-antiban reports elevated ban risk");
+      void recordEvent("ban_suspected", {
+        connectionStatus: this.status,
+        risk: health.risk,
+        score: health.score,
+        reasons: health.reasons,
+        recommendation: health.recommendation,
+      });
+    }
+    this.lastAlertedRisk = health.risk;
+
+    void recordEvent("heartbeat", { connectionStatus: this.status, warmUp, health });
   }
 
   stop(): void {
@@ -140,15 +159,17 @@ export class BotConnection {
     }
 
     if (connection === "open") {
+      const wasRecovering = this.backoff.attemptCount > 0;
       this.status = "open";
       this.backoff.reset();
       const { warmUp, health } = this.sock!.antiban.getStats();
       logger.info({ warmUp, health }, "antiban state after connect");
-      await recordHeartbeat("open", {
-        attempt: this.backoff.attemptCount,
-        warmUp,
-        health,
-      });
+      // "reconnect" only when this open follows a prior disconnect — the very
+      // first connection of a run isn't a recovery, it's just startup, and the
+      // periodic heartbeat loop covers that case within one interval.
+      if (wasRecovering) {
+        await recordEvent("reconnect", { connectionStatus: "open", warmUp, health });
+      }
       this.opts.onReady?.(this.sock!);
     }
 
@@ -157,9 +178,14 @@ export class BotConnection {
         ?.statusCode;
       const loggedOut = statusCode === DisconnectReason.loggedOut;
 
-      await recordHeartbeat("closed", { statusCode, loggedOut });
-
       if (loggedOut) {
+        this.status = "closed";
+        await recordEvent("disconnect", {
+          connectionStatus: "closed",
+          statusCode,
+          loggedOut: true,
+          retrying: false,
+        });
         logger.error(
           "Session logged out (device removed from WhatsApp Linked Devices). " +
             `Delete ${config.authStateDir} and re-run to pair again. Not retrying.`
@@ -167,7 +193,16 @@ export class BotConnection {
         return;
       }
 
-      if (this.stopped) return;
+      if (this.stopped) {
+        this.status = "closed";
+        await recordEvent("disconnect", {
+          connectionStatus: "closed",
+          statusCode,
+          loggedOut: false,
+          retrying: false,
+        });
+        return;
+      }
 
       this.status = "reconnecting";
       const delay = this.backoff.next();
@@ -175,7 +210,14 @@ export class BotConnection {
         { statusCode, delayMs: delay, attempt: this.backoff.attemptCount },
         "connection closed, reconnecting with backoff"
       );
-      await recordHeartbeat("reconnecting", { statusCode, delayMs: delay });
+      await recordEvent("disconnect", {
+        connectionStatus: "reconnecting",
+        statusCode,
+        loggedOut: false,
+        retrying: true,
+        retryDelayMs: delay,
+        attempt: this.backoff.attemptCount,
+      });
       await sleep(delay);
       if (!this.stopped) await this.connect();
     }
