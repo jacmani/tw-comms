@@ -64,6 +64,18 @@ export interface Notice {
   approval_round: number;
 }
 
+/** A WhatsApp group/channel the dashboard can offer as a send target — populated
+ * by an admin as real groups get onboarded (see Settings), since the actual JIDs
+ * only exist in the bot's own .env and most of the 8 tower groups aren't joined
+ * yet (Rollout & Launch Gate is still ahead). */
+export interface WhatsAppTarget {
+  id: string;
+  target_type: "whatsapp_group" | "whatsapp_channel";
+  target_id: string;
+  target_name: string;
+  is_active: boolean;
+}
+
 export interface ApprovalRule {
   id: string;
   category: NoticeCategory;

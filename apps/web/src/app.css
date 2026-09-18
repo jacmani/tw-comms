@@ -1,0 +1,47 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=DM+Sans:wght@400;500;700&display=swap");
+@import "tailwindcss";
+
+/* Design tokens per docs/specs/02-ui-design.md §1.1 — reused, not reinvented. */
+@theme {
+  --color-parchment: #f4e9cc;
+  --color-ink-green: #2f4a34;
+  --color-terracotta: #c1502e;
+  --color-marigold: #d9a441;
+
+  /* Status colors (additive, kept separate from the brand palette per the doc). */
+  --color-status-draft: #9ca3af;
+  --color-status-pending: var(--color-marigold);
+  --color-status-approved: var(--color-ink-green);
+  --color-status-failed: var(--color-terracotta);
+
+  /* Bot-health traffic light — system-status semantics, not brand content. */
+  --color-health-green: #1a8a4a;
+  --color-health-amber: #d97706;
+  --color-health-red: #dc2626;
+
+  --font-display: "Fraunces", serif;
+  --font-body: "DM Sans", sans-serif;
+}
+
+body {
+  background-color: var(--color-parchment);
+  color: var(--color-ink-green);
+  font-family: var(--font-body);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+}
+
+/* Large tap targets everywhere per the doc's "mixed-age, elderly-inclusive
+   readability" principle — applied globally rather than per-component so no
+   screen accidentally ships a cramped button. */
+button,
+a.btn,
+input,
+select,
+textarea {
+  min-height: 2.75rem;
+}
