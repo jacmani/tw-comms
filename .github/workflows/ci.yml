@@ -8,6 +8,15 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # apps/web (SvelteKit) resolves these via $env/static/public at build time —
+      # Vite fails the build if they're undefined, even though nothing here
+      # actually calls Supabase during a typecheck/build/test run. Placeholder
+      # values, not secrets: real credentials are supplied by the hosting
+      # platform (Vercel/VPS) at deploy time, not by CI.
+      PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+      PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+      SUPABASE_SERVICE_ROLE_KEY: placeholder-service-role-key
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
