@@ -10,6 +10,8 @@ import { config } from "./config.js";
 import { logger } from "./logger.js";
 import { ReconnectBackoff, sleep } from "./reconnect.js";
 import { recordEvent, startHeartbeatLoop, shouldAlertBanRisk, type BotStatus } from "./health.js";
+import { handleCommitteeReaction } from "./approvals/reactions.js";
+import { startSubmissionWatcher } from "./approvals/submissionWatcher.js";
 
 // baileys-antiban doesn't export its WASocket interface publicly — derive it from
 // wrapSocket's own parameter type instead of re-declaring a parallel shape here.
@@ -36,6 +38,7 @@ export class BotConnection {
   private backoff = new ReconnectBackoff();
   private sock: SafeSocket | null = null;
   private stopHeartbeat: (() => void) | null = null;
+  private stopSubmissionWatcher: (() => void) | null = null;
   private stopped = false;
   // Edge-triggers ban_suspected so a sustained high-risk period logs one alert, not
   // one every heartbeat interval — re-arms once risk drops back below "high".
@@ -83,6 +86,7 @@ export class BotConnection {
   stop(): void {
     this.stopped = true;
     this.stopHeartbeat?.();
+    this.stopSubmissionWatcher?.();
     this.sock?.end(undefined);
   }
 
@@ -139,6 +143,13 @@ export class BotConnection {
     rawSock.ev.on("connection.update", (update) => {
       void this.handleConnectionUpdate(update);
     });
+
+    // ClickUp 86d44wjuc — committee approval/rejection via 👍/👎 reactions.
+    rawSock.ev.on("messages.reaction", (updates) => {
+      for (const update of updates) {
+        if (this.sock) void handleCommitteeReaction(update, this.sock);
+      }
+    });
   }
 
   private async handleConnectionUpdate(update: {
@@ -170,6 +181,8 @@ export class BotConnection {
       if (wasRecovering) {
         await recordEvent("reconnect", { connectionStatus: "open", warmUp, health });
       }
+      this.stopSubmissionWatcher?.();
+      this.stopSubmissionWatcher = startSubmissionWatcher(this.sock!);
       this.opts.onReady?.(this.sock!);
     }
 
@@ -177,6 +190,8 @@ export class BotConnection {
       const statusCode = (lastDisconnect?.error as Boom | undefined)?.output
         ?.statusCode;
       const loggedOut = statusCode === DisconnectReason.loggedOut;
+      this.stopSubmissionWatcher?.();
+      this.stopSubmissionWatcher = null;
 
       if (loggedOut) {
         this.status = "closed";

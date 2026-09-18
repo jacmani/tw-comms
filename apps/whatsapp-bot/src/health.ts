@@ -1,22 +1,13 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { BanRiskLevel } from "baileys-antiban";
-import { config } from "./config.js";
+import { getSupabaseClient } from "./supabase.js";
 import { logger } from "./logger.js";
+import { config } from "./config.js";
 
 /** Baileys connection state — distinct from the bot_health_log event vocabulary below. */
 export type BotStatus = "connecting" | "open" | "reconnecting" | "closed";
 
 /** Matches 01-specification.md §4.5's event_type enum (ClickUp 86d45pbj8). */
 export type BotHealthEventType = "heartbeat" | "disconnect" | "reconnect" | "ban_suspected";
-
-let client: SupabaseClient | null = null;
-if (config.supabase.url && config.supabase.serviceRoleKey) {
-  client = createClient(config.supabase.url, config.supabase.serviceRoleKey);
-} else {
-  logger.warn(
-    "SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not set — health events will only log locally, not persist. Fine for local pairing tests, not for the hosted bot."
-  );
-}
 
 export function isElevatedRisk(risk: BanRiskLevel | undefined): boolean {
   return risk === "high" || risk === "critical";
@@ -40,6 +31,7 @@ export async function recordEvent(
   detail: Record<string, unknown> = {}
 ): Promise<void> {
   logger.info({ eventType, ...detail }, "bot_health_log event");
+  const client = getSupabaseClient();
   if (!client) return;
 
   const { error } = await client.from("bot_health_log").insert({

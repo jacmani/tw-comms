@@ -34,6 +34,16 @@ export interface NoticeTemplate {
   is_active: boolean;
 }
 
+export type NoticeSendTargetType = "whatsapp_group" | "whatsapp_channel" | "mygate_manual";
+
+/** One send destination, chosen at compose time — mirrors notice_sends' target_* columns
+ * 1:1 so a notice's intent (target_groups) and its actual per-target outcomes line up. */
+export interface NoticeTarget {
+  target_type: NoticeSendTargetType;
+  target_id: string; // WhatsApp JID, or a fixed sentinel ("mygate") for the manual-paste reminder
+  target_name: string;
+}
+
 export interface Notice {
   id: string;
   template_id: string | null;
@@ -41,12 +51,17 @@ export interface Notice {
   body: string;
   image_url: string | null;
   category: NoticeCategory;
-  target_groups: string[];
+  target_groups: NoticeTarget[];
   status: NoticeStatus;
   created_by: string | null;
   created_at: string;
   mygate_posted: boolean;
   mygate_posted_at: string | null;
+  whatsapp_prompt_message_id: string | null;
+  // Bumped on every edit-and-resend (ClickUp 86d44wm6u) so notice_approvals votes
+  // from a rejected round don't carry over and bias the resubmitted round, while
+  // still being kept (not deleted) for the audit trail.
+  approval_round: number;
 }
 
 export interface ApprovalRule {
@@ -61,6 +76,7 @@ export type ApprovalChannel = "email" | "whatsapp_group";
 export interface NoticeApproval {
   id: string;
   notice_id: string;
+  approval_round: number;
   approver_id: string;
   action: ApprovalAction;
   channel: ApprovalChannel;
@@ -80,7 +96,6 @@ export interface ApproverAllowlistEntry {
   added_at: string;
 }
 
-export type NoticeSendTargetType = "whatsapp_group" | "whatsapp_channel" | "mygate_manual";
 export type NoticeSendStatus = "queued" | "sent" | "failed";
 
 export interface NoticeSend {
@@ -121,4 +136,53 @@ export interface ImageGenProviderSetting {
   priority: number; // lower = tried first in the fallback order
   // API keys/tokens live in a separate, more tightly-scoped table (see migration) —
   // never inline them into a type that might get logged or serialized broadly.
+}
+
+// ---- Approval audit trail (ClickUp 86d44wm7b) ----
+
+/** Denormalized, read-only view of "who decided what, on which notice, when" —
+ * one row per notice_approvals decision, joined with the notice it was decided on.
+ * Both the bot (CLI export) and Phase 3's dashboard build this the same shape from
+ * their own Supabase client, so the CSV formatter below is shared. */
+export interface AuditTrailRow {
+  notice_id: string;
+  notice_title: string;
+  notice_category: NoticeCategory;
+  approver_display_name: string;
+  approver_role: string;
+  action: ApprovalAction;
+  channel: ApprovalChannel;
+  comment: string | null;
+  decided_at: string;
+}
+
+const AUDIT_TRAIL_CSV_HEADER = [
+  "notice_id",
+  "notice_title",
+  "notice_category",
+  "approver_display_name",
+  "approver_role",
+  "action",
+  "channel",
+  "comment",
+  "decided_at",
+] as const;
+
+function escapeCsvField(value: string): string {
+  if (/[",\n]/.test(value)) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
+
+/** Pure formatter, deliberately dependency-free (no CSV library) so it runs
+ * identically in the bot's Node CLI and the dashboard's SvelteKit server. */
+export function formatAuditTrailCsv(rows: AuditTrailRow[]): string {
+  const lines = [AUDIT_TRAIL_CSV_HEADER.join(",")];
+  for (const row of rows) {
+    lines.push(
+      AUDIT_TRAIL_CSV_HEADER.map((key) => escapeCsvField(String(row[key] ?? ""))).join(",")
+    );
+  }
+  return lines.join("\n");
 }

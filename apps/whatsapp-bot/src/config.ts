@@ -54,6 +54,15 @@ export const config = {
       optional("HEALTH_HEARTBEAT_INTERVAL_MS", "300000")
     ),
   },
+
+  approval: {
+    // PROVISIONAL default pending the committee's quorum-rule decision (ClickUp
+    // 86d44wjuj). Jacob, 2026-09-19: "any 2 of N allowlisted approvers" as a
+    // placeholder so Phase 2 isn't blocked on governance — override via
+    // APPROVAL_QUORUM_COUNT once the committee decides, nothing else should need
+    // to change (see apps/whatsapp-bot/src/approvals/quorum.ts).
+    quorumCount: Number(optional("APPROVAL_QUORUM_COUNT", "2")),
+  },
 };
 
 export { required };
