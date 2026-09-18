@@ -1,5 +1,6 @@
 import { fail } from "@sveltejs/kit";
 import type { ImageGenProviderSetting, WhatsAppTarget } from "@tw-comms/shared";
+import { createSupabaseAdminClient } from "$lib/server/supabaseAdmin";
 import type { Actions, PageServerLoad } from "./$types";
 
 /**
@@ -37,14 +38,13 @@ export const actions: Actions = {
     return { success: true };
   },
 
-  set_provider_key: async ({ request, locals }) => {
-    // Note: writing via the RLS-scoped session client — image_gen_provider_secrets
-    // has no policy at all for approvers (0008_image_gen.sql), so this insert only
-    // succeeds when the dashboard's server code runs with the service role
-    // instead. Flagged rather than silently failing: this action needs the
-    // dashboard's server-side Supabase client to use the service role key for
-    // this one table, which isn't wired up yet (locals.supabase is the anon/RLS
-    // client everywhere else in this app) — see the ClickUp comment on 86d44wmfd.
+  set_provider_key: async ({ request }) => {
+    // image_gen_provider_secrets has no RLS policy at all for approvers
+    // (0008_image_gen.sql, deliberately) — this needs the service-role client.
+    // Safe to use here without a redundant in-action auth check because
+    // hooks.server.ts's authGuard already requires locals.isApprover for every
+    // request in the (app) route group, form actions included, before this code
+    // ever runs.
     const formData = await request.formData();
     const provider = String(formData.get("provider"));
     const keyName = String(formData.get("key_name"));
@@ -52,15 +52,11 @@ export const actions: Actions = {
 
     if (!keyValue) return fail(400, { error: "Enter a value." });
 
-    const { error } = await locals.supabase
+    const { error } = await createSupabaseAdminClient()
       .from("image_gen_provider_secrets")
       .upsert({ provider, key_name: keyName, key_value: keyValue }, { onConflict: "provider,key_name" });
 
-    if (error) {
-      return fail(500, {
-        error: "Couldn't save the key from here — this screen needs a service-role write path, not yet wired up (see the code comment).",
-      });
-    }
+    if (error) return fail(500, { error: "Couldn't save the key — try again." });
     return { success: true };
   },
 

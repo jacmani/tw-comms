@@ -16,6 +16,9 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.45.4
         version: 2.112.4
+      '@tw-comms/image-gen':
+        specifier: workspace:*
+        version: link:../../packages/image-gen
     devDependencies:
       '@sveltejs/adapter-auto':
         specifier: ^3.3.1
@@ -99,6 +102,22 @@ importers:
       eslint:
         specifier: ^8.57.1
         version: 8.57.1
+      tsx:
+        specifier: ^4.19.1
+        version: 4.23.12
+      typescript:
+        specifier: ^5.6.2
+        version: 5.9.3
+
+  packages/image-gen:
+    dependencies:
+      '@tw-comms/shared':
+        specifier: workspace:*
+        version: link:../shared
+    devDependencies:
+      '@types/node':
+        specifier: ^22.7.4
+        version: 22.20.1
       tsx:
         specifier: ^4.19.1
         version: 4.23.12
